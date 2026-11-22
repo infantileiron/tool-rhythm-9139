@@ -1,0 +1,101 @@
+name: tool-rhythm
+
+x-python: &python
+  build: ./backend
+  environment:
+    MYSQL_HOST: db
+    MYSQL_USER: ${MYSQL_USER:-rhythm}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:-tool_rhythm}
+    REDIS_URL: redis://redis:6379/0
+    JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+    SEED_DEMO: ${SEED_DEMO:-true}
+  volumes:
+    - artifacts:/artifacts
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  frontend:
+    container_name: ${COMPOSE_PROJECT_NAME:-tool-rhythm}-frontend
+    build: ./frontend
+    ports:
+      - '127.0.0.1:${FRONTEND_PORT:-18275}:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1/api/health']
+      interval: 4s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    <<: *python
+    container_name: ${COMPOSE_PROJECT_NAME:-tool-rhythm}-backend
+    ports:
+      - '127.0.0.1:${BACKEND_PORT:-19275}:8000'
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 4s
+      timeout: 4s
+      retries: 15
+      start_period: 8s
+
+  worker:
+    <<: *python
+    container_name: ${COMPOSE_PROJECT_NAME:-tool-rhythm}-worker
+    command: [python, -m, src.worker]
+    restart: on-failure
+    healthcheck:
+      test: [CMD, python, -c, "from pathlib import Path; from time import time; p=Path('/artifacts/worker-heartbeat'); raise SystemExit(not p.is_file() or time()-p.stat().st_mtime>15)"]
+      interval: 4s
+      timeout: 3s
+      retries: 15
+
+  db:
+    container_name: ${COMPOSE_PROJECT_NAME:-tool-rhythm}-db
+    image: mysql:8.0
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_0900_ai_ci]
+    ports:
+      - '127.0.0.1:${DB_PORT:-17775}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER:-rhythm}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-tool_rhythm}
+    volumes:
+      - database:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h127.0.0.1 -u"$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1 FROM stations LIMIT 1"']
+      interval: 4s
+      timeout: 4s
+      retries: 22
+      start_period: 10s
+
+  redis:
+    container_name: ${COMPOSE_PROJECT_NAME:-tool-rhythm}-redis
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 4s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  database:
+  redis-data:
+  artifacts:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET:-10.221.206.0/24}
