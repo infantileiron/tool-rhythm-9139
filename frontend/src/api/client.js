@@ -15,7 +15,12 @@ async function request(path, {method = 'GET', body, download = false} = {}) {
       document.dispatchEvent(new Event('session-expired'));
     }
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.detail || `服务暂时不可用（${response.status}），请稍后重试。`);
+    const detail = payload.detail;
+    const message = typeof detail === 'string' ? detail
+      : detail?.message ? `${detail.message}：${(detail.rows || []).join('；')}`
+      : payload.fields ? `请核对输入字段：${payload.fields.join('、')}`
+      : `服务暂时不可用（${response.status}），请稍后重试。`;
+    throw new Error(message);
   }
   return download ? response.blob() : response.json();
 }
@@ -24,11 +29,15 @@ export const api = {
   login: body => request('/login', {method: 'POST', body}),
   stations: () => request('/stations'),
   addStation: body => request('/stations', {method: 'POST', body}),
-  records: (period, station, page) => request(`/records/search?${new URLSearchParams({page, ...(station ? {station_code: station} : {})})}`, {method: 'POST', body: period}),
+  records: (query, page) => request(`/records/search?page=${page}`, {method: 'POST', body: query}),
   addRecord: body => request('/records', {method: 'POST', body}),
   correctRecord: (id, body) => request(`/records/${id}`, {method: 'PATCH', body}),
+  imports: () => request('/imports'),
+  importLedger: body => request('/imports', {method: 'POST', body}),
+  reconcile: (query, station) => request(`/reconcile${station ? `?station_code=${encodeURIComponent(station)}` : ''}`, {method: 'POST', body: query}),
   runs: () => request('/runs'),
   run: id => request(`/runs/${id}`),
+  runTrace: id => request(`/runs/${id}/trace`),
   createRun: body => request('/runs', {method: 'POST', body}),
   publish: (id, body) => request(`/runs/${id}/publish`, {method: 'POST', body}),
   download: id => request(`/runs/${id}/duty.csv`, {download: true}),

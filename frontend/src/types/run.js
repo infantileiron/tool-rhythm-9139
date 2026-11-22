@@ -1,5 +1,5 @@
 /** @typedef {'queued'|'running'|'ready'|'published'|'failed'} RunStatus */
-/** @typedef {'core'|'border'|'noise'|'low_sample'|'no_data'} StationStatus */
+/** @typedef {'core'|'border'|'noise'|'low_sample'|'no_data'|'unreconciled'} StationStatus */
 
 /** @param {{status: RunStatus}} run */
 export function isProcessing(run) {

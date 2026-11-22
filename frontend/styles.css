@@ -207,3 +207,32 @@ fieldset p { font-size: 12px; color: var(--muted); margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; }
 }
+
+/* 两路联单对账 */
+.hint { color: var(--muted); font-size: 12px; }
+.hint.warn { color: var(--rust-deep); padding: 8px 19px; background: var(--warm); }
+.import-note:not(:empty) { margin-top: 10px; padding: 9px 12px; background: var(--sage); font-size: 12px; }
+.recon-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-block: 1px solid var(--rule); }
+.recon-strip > div { padding: 9px 13px; border-left: 1px solid var(--rule); }
+.recon-strip > div:first-child { border: 0; padding-left: 19px; }
+.recon-strip span, .recon-strip strong { display: block; }
+.recon-strip span { color: var(--muted); font-size: 12px; }
+.recon-strip strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.recon-sub { border-top: 1px solid var(--rule); }
+.recon-sub h3 { padding: 13px 19px 9px; }
+.recon-sub td small { display: block; margin-left: 0; }
+.recon-banner { display: flex; gap: 13px; align-items: baseline; padding: 11px 15px; margin-bottom: 13px; background: var(--warm); border-left: 3px solid var(--rust); }
+.recon-banner span { font-weight: 700; color: var(--rust-deep); white-space: nowrap; }
+.recon-banner p { color: var(--ink); font-size: 13px; }
+tr.row-pending td { background: oklch(96% .03 82); }
+.badge.cabinet { background: var(--sage); color: var(--pine); }
+.badge.paper { background: var(--warm); color: var(--rust-deep); }
+.badge.manual { background: var(--paper); color: var(--muted); }
+.badge.partial, .badge.disputed, .badge.border { background: oklch(92% .055 89); color: oklch(40% .075 76); }
+.badge.clean, .badge.paired { background: var(--sage); color: var(--pine); }
+.badge.unreconciled, .badge.no_data, .badge.unmatched, .badge.duplicate { background: var(--warm); color: var(--rust-deep); }
+@media (max-width: 767px) {
+  .recon-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recon-strip > div:nth-child(3) { border-left: 0; padding-left: 19px; }
+  .recon-banner { flex-direction: column; gap: 3px; }
+}

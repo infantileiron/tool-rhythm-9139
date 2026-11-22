@@ -1,7 +1,7 @@
 from collections import deque
 from math import sqrt
 
-from src.constants.domain import StationStatus as Status
+from src.constants.domain import ReconState, StationStatus as Status
 
 
 def unit_vector(counts):
@@ -29,7 +29,7 @@ def dbscan(adjacent, min_points):
         if root in labels:
             continue
         cluster += 1
-        label = f'G{cluster:02}'
+        label = f'G{cluster:02d}'
         labels[root] = label
         queue = deque([root])
         while queue:
@@ -42,19 +42,27 @@ def dbscan(adjacent, min_points):
     return labels, core
 
 
+def has_usable_vector(site, params):
+    """能进入分型的站点：对账后有实收、不是未对账/无记录状态、且实收达到件数门槛。"""
+    return (site.get('recon_state') not in (ReconState.UNRECONCILED, ReconState.NO_DATA)
+            and sum(site['counts']) >= params['min_returns'])
+
+
 def classify(snapshot):
     params = snapshot['params']
     sites = sorted(snapshot['stations'], key=lambda site: site['code'])
-    vectors = {s['code']: unit_vector(s['counts']) for s in sites
-               if sum(s['counts']) >= params['min_returns']}
+    vectors = {s['code']: unit_vector(s['counts']) for s in sites if has_usable_vector(s, params)}
     adjacent = neighborhoods(vectors, params['eps'])
     labels, core = dbscan(adjacent, params['min_points'])
     members = []
     for site in sites:
         code, counts = site['code'], site['counts']
         total = sum(counts)
+        recon_state = site.get('recon_state', ReconState.CLEAN)
         group = labels.get(code)
-        if not total:
+        if recon_state == ReconState.UNRECONCILED:
+            status = Status.UNRECONCILED
+        elif recon_state == ReconState.NO_DATA or not total:
             status = Status.EMPTY
         elif code not in vectors:
             status = Status.LOW
@@ -79,4 +87,7 @@ def classify(snapshot):
                        'returns': sum(m['total'] for m in cohort)})
     return {'groups': groups, 'members': members,
             'diagnostics': {'eligible': len(vectors), 'stations': len(sites),
-                            'returns': sum(m['total'] for m in members)}}
+                            'returns': sum(m['total'] for m in members),
+                            'disputed': sum(m.get('disputed', 0) for m in members),
+                            'unreconciled': sum(1 for m in members if m['status'] == Status.UNRECONCILED),
+                            'partial': sum(1 for m in members if m.get('recon_state') == ReconState.PARTIAL)}}

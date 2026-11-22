@@ -6,8 +6,8 @@ export const routes = [
 ];
 
 export function locationRoute() {
-  const [key, id] = location.hash.slice(1).split('/');
-  return {route: routes.find(item => item.key === key) || routes[0], id};
+  const [key, ...rest] = location.hash.slice(1).split('/');
+  return {route: routes.find(item => item.key === key) || routes[0], id: rest.join('/') || undefined};
 }
 
 export function go(key, id) {

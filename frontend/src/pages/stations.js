@@ -22,9 +22,9 @@ export async function stationsPage(container) {
         <input type="search" id="station-filter" aria-label="筛选站点" placeholder="查找编号或站名"></div>
         <div id="station-rows"></div>
       </section>
-      <aside class="field-note"><span class="eyebrow">归还口径</span><h2>先核对站点，<br>再核对归还小时。</h2>
-        <p>本站台账按站点、日期和小时登记工具归还数量。自助柜的夜间归还计入实际发生小时。</p>
-        <a href="#ledger">打开归还时段 →</a></aside>
+      <aside class="field-note"><span class="eyebrow">归还口径</span><h2>先核对站点，<br>再对两路联单。</h2>
+        <p>柜机流水与纸联都按站点、日期和小时进入台账。两路记同一件工具时只计一次，件数对不上的差额不计实收。</p>
+        <a href="#ledger">打开归还时段与对账 →</a></aside>
     </div>`;
   const rows = container.querySelector('#station-rows');
   const filter = container.querySelector('#station-filter');

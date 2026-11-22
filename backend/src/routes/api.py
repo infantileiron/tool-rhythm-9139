@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, Query, Response
 from src.constants.domain import Role
 from src.controllers import session
 from src.middlewares.auth import current, only
-from src.schemas.inputs import Code, Correction, Login, Period, PlanInput, PublishInput, RecordInput, StationInput
+from src.schemas.inputs import (Code, Correction, ImportInput, Login, Period, PlanInput,
+                                PublishInput, RecordInput, RecordQuery, StationInput)
 from src.services import intake, plans
 
 router = APIRouter()
@@ -32,14 +33,28 @@ def station_create(data: StationInput, viewer=Depends(analyst)):
 
 
 @router.post('/records/search')
-def record_list(period: Period, station_code: Code | None = None,
-                page: int = Query(1, ge=1, le=1000000), viewer=Depends(current)):
-    return intake.records(period, station_code, page)
+def record_list(query: RecordQuery, page: int = Query(1, ge=1, le=1000000), viewer=Depends(current)):
+    return intake.records(query, query.station_code, query.channel, page)
 
 
 @router.post('/records', status_code=201)
 def record_create(data: RecordInput, viewer=Depends(analyst)):
     return intake.create_record(data, viewer['sub'])
+
+
+@router.post('/imports', status_code=201)
+def import_create(data: ImportInput, viewer=Depends(analyst)):
+    return intake.import_batch(data, viewer['sub'])
+
+
+@router.get('/imports')
+def import_list(viewer=Depends(current)):
+    return intake.batches()
+
+
+@router.post('/reconcile')
+def reconcile_view(period: Period, station_code: Code | None = None, viewer=Depends(current)):
+    return intake.reconciliation_view(period, station_code)
 
 
 @router.patch('/records/{record_id}')
@@ -60,6 +75,11 @@ def run_queue(data: PlanInput, viewer=Depends(analyst)):
 @router.get('/runs/{run_id}')
 def run_details(run_id: int, viewer=Depends(current)):
     return plans.details(run_id, viewer)
+
+
+@router.get('/runs/{run_id}/trace')
+def run_trace(run_id: int, viewer=Depends(current)):
+    return plans.trace(run_id, viewer)
 
 
 @router.post('/runs/{run_id}/publish')
